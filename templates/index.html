@@ -1,0 +1,253 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<meta charset="UTF-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+		<title>DDMSA</title>
+		<script src="https://cdn.tailwindcss.com"></script>
+		<script
+			crossorigin
+			src="https://unpkg.com/react@17/umd/react.development.js"
+		></script>
+		<script
+			crossorigin
+			src="https://unpkg.com/react-dom@17/umd/react-dom.development.js"
+		></script>
+		<script src="https://unpkg.com/babel-standalone@6/babel.min.js"></script>
+		<link
+			rel="stylesheet"
+			href="https://cdnjs.cloudflare.com/ajax/libs/antd/4.24.16/antd.min.css"
+			crossorigin="anonymous"
+			referrerpolicy="no-referrer"
+		/>
+		<script
+			src="https://cdnjs.cloudflare.com/ajax/libs/antd/4.24.16/antd.min.js"
+			crossorigin="anonymous"
+			referrerpolicy="no-referrer"
+		></script>
+		<link
+			rel="stylesheet"
+			href="https://cdn.staticfile.org/font-awesome/4.7.0/css/font-awesome.css"
+		/>
+		<style>
+			html,
+			body {
+				margin: 0;
+				padding: 0;
+				background: #fafafa;
+			}
+
+			html {
+				width: 100vw;
+				height: 100vh;
+			}
+
+			#root {
+				height: 100%;
+			}
+		</style>
+	</head>
+	<body>
+		<div id="root"></div>
+	</body>
+	<script type="text/babel">
+		const App = () => {
+			const loginInfo = React.useRef({ username: '', password: '' });
+			const registerInfo = React.useRef({
+				username: '',
+				email: '',
+				password: '',
+				role: '',
+				hospital: ''
+			});
+			const [role, setRole] = React.useState('');
+
+			const handleLogin = async () => {
+				try {
+					const res = await fetch('/login', {
+						method: 'POST',
+						headers: {
+							'content-type': 'application/json'
+						},
+						body: JSON.stringify(loginInfo.current)
+					});
+
+					const { success, errorMsg } = await res.json();
+					if (success) {
+						window.location.href = '/doctor_dashboard';
+					} else {
+						antd.message.error(errorMsg);
+					}
+				} catch (error) {
+					antd.message.error(error.toString());
+				}
+			};
+			const handleRegister = async () => {
+				try {
+					const res = await fetch('/register', {
+						method: 'POST',
+						headers: {
+							'content-type': 'application/json'
+						},
+						body: JSON.stringify(registerInfo.current)
+					});
+
+					const { success, errorMsg } = await res.json();
+					if (success) {
+						antd.message.success('regis');
+						window.location.reload();
+					} else {
+						antd.message.error(errorMsg);
+					}
+				} catch (error) {
+					antd.message.error(error.toString());
+				}
+			};
+
+			return (
+				<div className="h-full flex">
+					<div className="flex-1 bg-[#0050b3] flex flex-col justify-center items-center">
+						<img src="static/assets/images/brain.png" width={450} />
+						<div className="w-[500px] px-14">
+							<h1 className="text-2xl mt-5 font-bold text-white">
+								Digital Diagnosis Model and System for Autism
+							</h1>
+							<h2 className="mt-3 text-base text-white">
+								Using comprehensive information for autism
+								diagnosis
+							</h2>
+						</div>
+					</div>
+					<div className="flex-1 flex">
+						<div className="m-auto p-8 rounded-lg border bg-white">
+							<div className="text-lg font-bold text-center">
+								Login system
+							</div>
+							<antd.Tabs
+								defaultActiveKey="1"
+								centered
+								className="w-[320px]"
+							>
+								<antd.Tabs.TabPane tab="Login" key="login">
+									<div className="space-y-4">
+										<antd.Input
+											id="username"
+											placeholder="User"
+											prefix={
+												<i class="fa fa-user-o text-gray-400 mr-0.5"></i>
+											}
+											onChange={(e) => {
+												loginInfo.current.username =
+													e.target.value;
+											}}
+										/>
+										<antd.Input
+											id="password"
+											placeholder="Password"
+											type="password"
+											prefix={
+												<i class="fa fa-lock text-gray-400 mr-0.5"></i>
+											}
+											onChange={(e) => {
+												loginInfo.current.password =
+													e.target.value;
+											}}
+										/>
+										<antd.Button
+											type="primary"
+											className="w-full"
+											onClick={handleLogin}
+										>
+											Login
+										</antd.Button>
+									</div>
+								</antd.Tabs.TabPane>
+								<antd.Tabs.TabPane
+									tab="Register"
+									key="register"
+								>
+									<div className="space-y-4">
+										<antd.Input
+											placeholder="Username"
+											prefix={
+												<i class="fa fa-user-o text-gray-400 mr-0.5"></i>
+											}
+											onChange={(e) => {
+												registerInfo.current.username =
+													e.target.value;
+											}}
+										/>
+										<antd.Input
+											placeholder="Email Address"
+											prefix={
+												<i class="fa fa-envelope-o text-gray-400 mr-0.5"></i>
+											}
+											onChange={(e) => {
+												registerInfo.current.email =
+													e.target.value;
+											}}
+										/>
+										<antd.Input
+											placeholder="Password"
+											prefix={
+												<i class="fa fa-lock text-gray-400 mr-0.5"></i>
+											}
+											onChange={(e) => {
+												registerInfo.current.password =
+													e.target.value;
+											}}
+										/>
+										<antd.Select
+											placeholder="Role"
+											className="w-full"
+											options={[
+												{
+													value: 'user',
+													label: 'Ordinary users'
+												},
+												{
+													value: 'manager',
+													label: 'Administrators'
+												},
+												{
+													value: 'doctor',
+													label: 'Doctor'
+												}
+											]}
+											onChange={(value) => {
+												registerInfo.current.role =
+													value;
+												setRole(value);
+											}}
+										/>
+										{role === 'doctor' ? (
+											<antd.Input
+												placeholder="Hospital"
+												prefix={
+													<i class="fa fa-hospital-o text-gray-400 mr-0.5"></i>
+												}
+												onChange={(e) => {
+													registerInfo.current.hospital =
+														e.target.value;
+												}}
+											/>
+										) : null}
+										<antd.Button
+											type="primary"
+											className="w-full"
+											onClick={handleRegister}
+										>
+											Register
+										</antd.Button>
+									</div>
+								</antd.Tabs.TabPane>
+							</antd.Tabs>
+						</div>
+					</div>
+				</div>
+			);
+		};
+
+		ReactDOM.render(<App />, document.querySelector('#root'));
+	</script>
+</html>
