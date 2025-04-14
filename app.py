@@ -8,27 +8,29 @@ from werkzeug.utils import secure_filename
 import zipfile
 import csv
 
-import torch
-import numpy as np
-from models.MyModel import MyModel  # Ensure this import matches your directory structure
+# 注释掉模型相关导入
+# import torch
+# import numpy as np
+# from models.MyModel import MyModel  # Ensure this import matches your directory structure
 from flask_cors import CORS
 
 
-from nilearn.image import load_img
-from nilearn import masking
-from nilearn.image import resample_to_img
-from nilearn.input_data import NiftiLabelsMasker
-from nilearn import plotting, datasets
-from nilearn import image
-import nibabel as nib
-import matplotlib
+# 注释掉与神经网络相关的导入
+# from nilearn.image import load_img
+# from nilearn import masking
+# from nilearn.image import resample_to_img
+# from nilearn.input_data import NiftiLabelsMasker
+# from nilearn import plotting, datasets
+# from nilearn import image
+# import nibabel as nib
+# import matplotlib
 
-import pickle
-import networkx as nx
-import plotly.graph_objects as go
-from torch_geometric.data import Data
+# import pickle
+# import networkx as nx
+# import plotly.graph_objects as go
+# from torch_geometric.data import Data
 
-matplotlib.use("Agg")
+# matplotlib.use("Agg")
 
 os.environ["HOME"] = os.path.expanduser("~")
 
@@ -50,6 +52,8 @@ cases = []
 # global viewing_file
 
 
+# 注释掉模型配置和加载
+"""
 # Configuration class for model parameters
 class DefaultConfig(object):
     dataset = "Kaggle"
@@ -135,8 +139,7 @@ except Exception as e:
     raise e
 modelNii.to(argsNii.device)
 modelNii.eval()
-
-
+"""
 
 
 def allowed_file(filename):
@@ -220,8 +223,11 @@ def file_upload_destination():
 
         # 读取文件内容，将第一列设置为索引
         data = pd.read_csv(file_path)
-        # 假设你有一个预测函数 predict
-        diagnosis, risk, graph = predict(data.values)
+        # 注释掉模型预测
+        # diagnosis, risk, graph = predict(data.values)
+        
+        # 设置默认值
+        diagnosis, risk = 'Pending', '0.0'
 
         data = {
             'age': request.form.get("age"),
@@ -231,9 +237,9 @@ def file_upload_destination():
             'file': filename,
             'uploadDate': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
             #保留预测功能
-            'diagnosis':diagnosis,
+            'diagnosis': diagnosis,
             # 保留预测功能
-            'risk':str(risk),
+            'risk': str(risk),
             'doctor':session['username']
         }
         cases.append(data)
@@ -391,20 +397,24 @@ def upload_image_files():
         file_path = os.path.join(app.config.get("UPLOAD_FOLDER"), filename)
 
         file.save(file_path)
-        #convert_fmri_image_to_timeseries(file_path, filename2, app.config.get("UPLOAD_FOLDER"))
+        # 注释掉模型预测相关代码
+        # convert_fmri_image_to_timeseries(file_path, filename2, app.config.get("UPLOAD_FOLDER"))
         # TODO: 这里更改了fMRI到时序数据的函数，并且这个函数这里是没有第一列的unname:0无意义信息的，如果需要请自行修改index=True
-        convert_fmri_image_to_ho_timeseries(file_path, filename2, app.config.get("UPLOAD_FOLDER"))
+        # convert_fmri_image_to_ho_timeseries(file_path, filename2, app.config.get("UPLOAD_FOLDER"))
 
-        file_path2 = os.path.join(app.config.get("UPLOAD_FOLDER"), filename2+ '_timeseries_predict.csv')
-        data = pd.read_csv(file_path2)
-        diagnosis, risk, graph = predictNii(data.values)
+        # file_path2 = os.path.join(app.config.get("UPLOAD_FOLDER"), filename2+ '_timeseries_predict.csv')
+        # data = pd.read_csv(file_path2)
+        # diagnosis, risk, graph = predictNii(data.values)
+        
+        # 设置默认值
+        diagnosis, risk = 'Pending', '0.0'
 
         data = {
             'age': request.form.get("age"),
             'gender': request.form.get("gender"),
             'name': request.form.get("name"),
             'fmri.image': filename,
-            'file':filename2+ '_timeseries.csv',
+            'file': filename2+ '_timeseries.csv', # 此处可能需要为文件创建一个空文件
             'uploadDate': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
             # 保留预测功能
             'diagnosis': diagnosis,
@@ -428,6 +438,8 @@ def upload_image_files():
         except pd.errors.EmptyDataError:
             df.to_csv(file_path, index=False)
 
+        # 注释掉与脑图像相关的代码
+        """
         counter = 0
         file_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
         target_folder = os.path.join(app.config['UPLOAD_FOLDER'], filename2)
@@ -442,6 +454,7 @@ def upload_image_files():
             final_path = os.path.join(target_folder, save_name)
             html_view.save_as_html(final_path)
             counter += 1
+        """
 
         return {'success': True, 'result': str(case_id)}, 200
     except Exception as e:
@@ -493,11 +506,16 @@ def query_fmri_image_html_content():
     data=request.get_json()
     index=data['index']
     name=data['image_name']
+    # 返回一个静态HTML内容而不是动态生成的脑图像
+    return jsonify({"message": "模型功能已禁用"}), 200
+    # 注释原始代码
+    """
     app.config['UPLOAD_FOLDER']
     file_name = f"brain_image_{index}.html"
     target_folder = os.path.join(app.config['UPLOAD_FOLDER'], name)
     file_path = os.path.join(target_folder, file_name)
     return send_file(file_path, mimetype='text/html')
+    """
 
 def convert_fmri_image_to_timeseries(image_path, file_name, fmri_save_path):
 
@@ -728,6 +746,28 @@ def get_column_data():
 def predict_case():
     req = request.get_json()
 
+    # 直接返回默认值，而不调用模型
+    diagnosis, risk = 'Pending', 0.0
+
+    # 更新CSV文件中的记录
+    csv_path = app.config.get("case_save_file")
+    df = pd.read_csv(csv_path)
+
+    # 找到df中'file'列的值等于req['viewing_file']的那一行
+    match = df['file'] == req['viewing_file']
+
+    if match.any():  # 如果找到了匹配的行
+        # 更新diagnosis和risk值
+        df.loc[match, 'diagnosis'] = diagnosis
+        df.loc[match, 'risk'] = str(risk)
+
+        # 将更新后的数据写回到csv文件中
+        df.to_csv(csv_path, index=False)
+
+    return {'success': True, 'result': {'diagnosis': diagnosis, 'risk': str(risk)}}, 200
+
+    # 注释掉原始代码
+    """
     file_path = os.path.join(app.config['UPLOAD_FOLDER'], req['viewing_file'])
     try:
         if req['viewing_file'].endswith("timeseries.csv"):
@@ -761,10 +801,20 @@ def predict_case():
         return {'success': True, 'result': {'diagnosis': diagnosis, 'risk': str(risk)}}, 200
     except Exception as e:
         return {'success': False,'errorMsg': str(e)}, 200
+    """
 
 
 @app.route('/get_nii_data/<filename>')
 def get_nii_data(filename):
+    # 返回一个空的结果而不是解析.nii文件
+    return jsonify({
+        'data': [],
+        'dimensions': [0, 0, 0],
+        'message': '模型功能已禁用'
+    })
+    
+    # 注释掉原始代码
+    """
     file_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
     if not os.path.exists(file_path):
         return jsonify({'error': 'File not found'}), 404
@@ -785,10 +835,16 @@ def get_nii_data(filename):
         return jsonify({'data': data_list, 'dimensions': dimensions})
     except Exception as e:
         return jsonify({'error': str(e)}), 500
+    """
 
 
 @app.route('/get_brain_image', methods=['GET'])
 def get_brain_image():
+    # 返回一个简单的HTML而不是动态生成的脑图像
+    return jsonify({"message": "模型功能已禁用"}), 200
+    
+    # 注释掉原始代码
+    """
     # 加载示例图像
     brain_index = int(request.args.get('index'))
     print(brain_index)
@@ -802,107 +858,7 @@ def get_brain_image():
     html_view.save_as_html("brain_image.html")
 
     return send_file("brain_image.html", mimetype='text/html')
-
-
-# Preprocess the data to fit the model input requirements
-def preprocess_data(data):
-    seq_len = args.seq_len
-    enc_in = args.enc_in
-    current_seq_len, current_enc_in = data.shape
-
-    if current_seq_len < seq_len:
-        data = np.vstack((data, np.zeros((seq_len - current_seq_len, current_enc_in))))
-    elif current_seq_len > seq_len:
-        data = data[:seq_len, :]
-
-    if current_enc_in < enc_in:
-        data = np.hstack((data, np.zeros((seq_len, enc_in - current_enc_in))))
-    elif current_enc_in > enc_in:
-        data = data[:, :enc_in]
-
-    inputs = torch.tensor(data)
-    return inputs
-
-# Predict function using the pre-trained model
-def predict(data):
-    inputs = preprocess_data(data)
-    inputs = inputs.unsqueeze(0).float().to(args.device)
-    with torch.no_grad():
-        try:
-            logit, _, _, _, graph = model(inputs)
-            _, predicted = torch.max(logit, 1)
-            proba = torch.nn.functional.softmax(logit, dim=1).detach().cpu().numpy()
-            diagnosis = 'ASD' if predicted.item() == 0 else 'Normal'
-            risk = float(proba[0][predicted.item()]).__round__(4)
-            # 确保风险值保留4位小数，不足4位加0
-            risk = f"{risk:.4f}"
-            # 如果风险值为1，则将其替换为0.9999
-            if risk == "1.0000":
-                risk = "0.9999"
-            risk = float(risk)
-            if risk * 1000 % 1 == 0:  # 这将检查最后一位是否为0
-                risk = risk + 0.0001  # 将最后一个0替换为1
-        except Exception as e:
-            print("Error in predict:", e)
-            raise e
-    if diagnosis == 'ASD':
-        return diagnosis, risk, graph
-    else:
-        asd_risk = (1 - risk).__round__(4)
-        asd_risk = f"{asd_risk:.4f}"
-        asd_risk = float(asd_risk)
-        if asd_risk * 1000 % 1 == 0:  # 这将检查最后一位是否为0
-            asd_risk = asd_risk + 0.0001  # 将最后一个0替换为1
-        return diagnosis, asd_risk, graph
-
-def predictNii(data):
-    inputs = preprocess_dataNii(data)
-    inputs = inputs.unsqueeze(0).float().to(argsNii.device)
-    with torch.no_grad():
-        try:
-            logit, _, _, _, graph = modelNii(inputs)
-            _, predicted = torch.max(logit, 1)
-            proba = torch.nn.functional.softmax(logit, dim=1).detach().cpu().numpy()
-            diagnosis = 'ASD' if predicted.item() == 0 else 'Normal'
-            risk = float(proba[0][predicted.item()]).__round__(4)
-            # 确保风险值保留4位小数，不足4位加0
-            risk = f"{risk:.4f}"
-            # 如果风险值为1，则将其替换为0.9999
-            if risk == "1.0000":
-                risk = "0.9999"
-            risk = float(risk)
-            if risk * 1000 % 1 == 0:  # 这将检查最后一位是否为0
-                risk = risk + 0.0001  # 将最后一个0替换为1
-        except Exception as e:
-            print("Error in predict:", e)
-            raise e
-    if diagnosis == 'ASD':
-        return diagnosis, risk, graph
-    else:
-        asd_risk = (1 - risk).__round__(4)
-        asd_risk = f"{asd_risk:.4f}"
-        asd_risk = float(asd_risk)
-        if asd_risk * 1000 % 1 == 0:  # 这将检查最后一位是否为0
-            asd_risk = asd_risk + 0.0001  # 将最后一个0替换为1
-        return diagnosis, asd_risk, graph
-
-def preprocess_dataNii(data):
-    seq_len = argsNii.seq_len
-    enc_in = argsNii.enc_in
-    current_seq_len, current_enc_in = data.shape
-
-    if current_seq_len < seq_len:
-        data = np.vstack((data, np.zeros((seq_len - current_seq_len, current_enc_in))))
-    elif current_seq_len > seq_len:
-        data = data[:seq_len, :]
-
-    if current_enc_in < enc_in:
-        data = np.hstack((data, np.zeros((seq_len, enc_in - current_enc_in))))
-    elif current_enc_in > enc_in:
-        data = data[:, :enc_in]
-
-    inputs = torch.tensor(data)
-    return inputs
+    """
 
 
 @app.route('/change_password', methods=['GET', 'POST'])
@@ -1010,6 +966,7 @@ def register():
         return {'success': True}, 200
     except Exception as e:
         print(str(e))
+        return {'success': False, 'errorMsg': str(e)}, 200
 
 
 @app.route('/login', methods=['POST'])
@@ -1061,9 +1018,13 @@ def doctor_dashboard():
         return redirect(url_for('index'))
 
 
-
 @app.route('/plot', methods=['POST'])
 def plot():
+    # 返回一个空的结果，不调用图表生成函数
+    return {'success': True, 'result': {'message': '模型功能已禁用'}}, 200
+    
+    # 注释掉原始代码
+    """
     data = request.get_json()
     filename = secure_filename(data['filename'])
     file_path = os.path.join(app.config.get("UPLOAD_FOLDER"), filename)
@@ -1081,7 +1042,10 @@ def plot():
     G = create_graph(node_features, edge_index, node_labels, headers)
     fig_dict = generate_plotly_fig(G, data['edges'], data['opacity'])
     return {'success': True, 'result': fig_dict}, 200
+    """
 
+# 注释掉图表生成相关函数
+"""
 def read_csv_headers(file_path):
     with open(file_path, mode='r') as csv_file:
         csv_reader = csv.reader(csv_file)
@@ -1181,7 +1145,7 @@ def json_traverse(obj, convert_function):
         return [json_traverse(element, convert_function) for element in obj]
     else:
         return convert_function(obj)
-
+"""
 
 @app.route('/api/get_statistics', methods=['POST'])
 def get_statistics():
