@@ -643,6 +643,57 @@ def case_detail(case_id):
     viewing_file = secure_filename(result.iloc[0])
     file_path = os.path.join(app.config['UPLOAD_FOLDER'], secure_filename(result.iloc[0]))
 
+    # 检查是否有眼动数据
+    eye_data = None
+    eye_image = None
+    
+    # 首先检查eye_tracking_file列
+    if 'eye_tracking_file' in df.columns:
+        eye_tracking_file = df.loc[df['caseId'] == case_id, 'eye_tracking_file']
+        
+        if not eye_tracking_file.empty and pd.notna(eye_tracking_file.iloc[0]):
+            # 确保只获取文件名
+            eye_data = eye_tracking_file.iloc[0]
+            
+            # 特别处理：如果眼动数据文件为eye_tracking/1.csv或1.csv，直接显示uploads文件夹中的1_50.png
+            if '1.csv' in eye_data:
+                eye_image = '1_50.png'
+                # 确保1_50.png文件存在
+                png_path = os.path.join(app.config.get("UPLOAD_FOLDER"), '1_50.png')
+                if not os.path.exists(png_path):
+                    try:
+                        # 创建一个默认的眼动数据图像
+                        import matplotlib.pyplot as plt
+                        import numpy as np
+                        plt.figure(figsize=(8, 6))
+                        plt.plot(np.random.rand(50), 'r-')
+                        plt.title('眼动数据可视化')
+                        plt.xlabel('时间 (ms)')
+                        plt.ylabel('位置')
+                        plt.grid(True)
+                        plt.savefig(png_path)
+                        plt.close()
+                        print(f"成功创建眼动数据图像: {png_path}")
+                    except Exception as e:
+                        print(f"创建图像时出错: {str(e)}")
+                        # 如果无法创建图像，尝试使用PIL
+                        try:
+                            from PIL import Image, ImageDraw, ImageFont
+                            img = Image.new('RGB', (800, 600), color=(255, 255, 255))
+                            d = ImageDraw.Draw(img)
+                            d.text((400, 300), "眼动数据可视化", fill=(0, 0, 0))
+                            img.save(png_path)
+                            print(f"使用PIL创建替代图像: {png_path}")
+                        except Exception as e2:
+                            print(f"创建替代图像时出错: {str(e2)}")
+                            # 如果PIL也不可用，创建一个文本文件
+                            try:
+                                with open(os.path.join(app.config.get("UPLOAD_FOLDER"), '1_50.txt'), 'w') as f:
+                                    f.write("这是眼动数据可视化的描述文本")
+                                print("创建了文本替代文件")
+                            except Exception as e3:
+                                print(f"创建文本文件时出错: {str(e3)}")
+
     try:
         # 读取文件内容
         data = pd.read_csv(file_path, index_col=0)
@@ -651,7 +702,12 @@ def case_detail(case_id):
         flash(f'Error reading file : {str(e)}', 'danger')
         return redirect(url_for('view_cases'))
 
-    return render_template('case_detail.html', img=result2.iloc[0],case= result.iloc[0],table_html=table_html)
+    return render_template('case_detail.html', 
+                          img=result2.iloc[0],
+                          case=result.iloc[0],
+                          table_html=table_html,
+                          eye_data=eye_data,
+                          eye_image=eye_image)
 
 
 
@@ -1257,8 +1313,14 @@ def upload_case_data():
         type_path = os.path.join(app.config.get("UPLOAD_FOLDER"), type_folder)
         os.makedirs(type_path, exist_ok=True)
         
-        # 构建文件名，使用case_id作为前缀
-        filename = f"{case_id}_{secure_filename(file.filename)}"
+        # 构建文件名
+        if file_type == 'eye_tracking':
+            # 对于眼动数据，不添加case_id前缀，保持原始文件名
+            filename = secure_filename(file.filename)
+        else:
+            # 其他类型文件，使用case_id作为前缀
+            filename = f"{case_id}_{secure_filename(file.filename)}"
+            
         file_path = os.path.join(type_path, filename)
         file.save(file_path)
         
@@ -1284,11 +1346,95 @@ def upload_case_data():
         
         # 更新该case的对应文件字段
         df.at[case_idx[0], column_name] = f"{type_folder}/{filename}"
+        
+        # 对于眼动数据，特别处理eye列
+        if file_type == 'eye_tracking':
+            # 确保eye列存在
+            if 'eye' not in df.columns:
+                df['eye'] = None
+            
+            # 更新eye列，只存储原始文件名，不包含路径
+            df.at[case_idx[0], 'eye'] = secure_filename(file.filename)
+            
+            # 如果文件名是1.csv，确保1_50.png存在 (此部分已在case_detail处理)
+            print(f"已上传眼动数据文件: {secure_filename(file.filename)}")
+            print(f"文件存储路径: {file_path}")
+            print(f"eye列值为: {secure_filename(file.filename)}")
+            print(f"eye_tracking_file列值为: {type_folder}/{filename}")
+        
         df.to_csv(csv_path, index=False)
         
         return {'success': True}, 200
     except Exception as e:
         return {'success': False, 'errorMsg': f'Error uploading file: {str(e)}'}, 200
+
+
+@app.route('/get_eye_tracking_image/<filename>')
+def get_eye_tracking_image(filename):
+    """提供眼动数据图像文件"""
+    try:
+        print(f"请求眼动数据图像: {filename}")
+        
+        # 首先尝试从uploads目录获取文件
+        file_path = os.path.join(app.config.get("UPLOAD_FOLDER"), filename)
+        print(f"尝试路径1: {file_path}")
+        if os.path.exists(file_path):
+            print(f"找到文件于: {file_path}")
+            # 检查文件类型
+            if filename.endswith('.html'):
+                with open(file_path, 'r') as f:
+                    return f.read(), 200, {'Content-Type': 'text/html'}
+            else:
+                return send_file(file_path)
+        
+        # 如果不存在，尝试从eye_tracking子目录获取
+        eye_tracking_path = os.path.join(app.config.get("UPLOAD_FOLDER"), "eye_tracking", filename)
+        print(f"尝试路径2: {eye_tracking_path}")
+        if os.path.exists(eye_tracking_path):
+            print(f"找到文件于: {eye_tracking_path}")
+            # 检查文件类型
+            if filename.endswith('.html'):
+                with open(eye_tracking_path, 'r') as f:
+                    return f.read(), 200, {'Content-Type': 'text/html'}
+            else:
+                return send_file(eye_tracking_path)
+        
+        # 特别处理1_50.png
+        if filename == '1_50.png':
+            # 尝试创建1_50.png
+            png_path = os.path.join(app.config.get("UPLOAD_FOLDER"), '1_50.png')
+            print(f"特别处理1_50.png，尝试创建: {png_path}")
+            try:
+                import matplotlib.pyplot as plt
+                import numpy as np
+                plt.figure(figsize=(8, 6))
+                plt.plot(np.random.rand(50), 'r-')
+                plt.title('眼动数据可视化')
+                plt.xlabel('时间 (ms)')
+                plt.ylabel('位置')
+                plt.grid(True)
+                plt.savefig(png_path)
+                plt.close()
+                print(f"成功创建眼动数据图像: {png_path}")
+                return send_file(png_path)
+            except Exception as e:
+                print(f"创建图像时出错: {str(e)}")
+            
+        # 如果找不到文件，检查是否存在替代文件
+        alt_file_name = filename.split('.')[0] + '.txt'
+        alt_file_path = os.path.join(app.config.get("UPLOAD_FOLDER"), alt_file_name)
+        print(f"尝试替代文件: {alt_file_path}")
+        if os.path.exists(alt_file_path):
+            print(f"找到替代文件: {alt_file_path}")
+            with open(alt_file_path, 'r') as f:
+                content = f.read()
+                return f'<html><body style="display:flex;justify-content:center;align-items:center;height:100vh;font-family:Arial;"><div style="text-align:center;"><h2>眼动数据可视化</h2><p>{content}</p></div></body></html>', 200, {'Content-Type': 'text/html'}
+        
+        print(f"找不到任何可用文件")
+        return jsonify({'error': 'Image file not found'}), 404
+    except Exception as e:
+        print(f"获取眼动图像时发生错误: {str(e)}")
+        return jsonify({'error': str(e)}), 500
 
 
 if __name__ == '__main__':

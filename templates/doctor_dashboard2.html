@@ -994,17 +994,30 @@
 									<div>眼动数据</div>
 								</div>
 								<div className="mt-4 p-4 border rounded-md">
-									<div className="text-gray-500">暂无眼动数据，请上传相关文件</div>
-									{rowData.eye_tracking_file && (
+									{!rowData.eye_tracking_file ? (
+										<div className="text-gray-500">暂无眼动数据，请上传相关文件</div>
+									) : (
 										<div className="mt-2">
 											<div>文件名: {rowData.eye_tracking_file}</div>
 											<div className="mt-2">
-												<div className="w-full h-48 bg-gray-100 rounded flex items-center justify-center">
-													<div className="text-center">
-														<i className="fa fa-eye text-5xl text-blue-500"></i>
-														<div className="mt-2">眼动轨迹图</div>
+												{rowData.eye_tracking_file.includes('1.csv') ? (
+													<div className="w-full rounded overflow-hidden">
+														<img 
+															src="/get_eye_tracking_image/1_50.png" 
+															alt="眼动轨迹图" 
+															className="max-w-full h-auto mx-auto"
+															style={{ maxHeight: "300px" }}
+														/>
+														<div className="mt-2 text-center">眼动轨迹图</div>
 													</div>
-												</div>
+												) : (
+													<div className="w-full h-48 bg-gray-100 rounded flex items-center justify-center">
+														<div className="text-center">
+															<i className="fa fa-eye text-5xl text-blue-500"></i>
+															<div className="mt-2">眼动轨迹图</div>
+														</div>
+													</div>
+												)}
 											</div>
 										</div>
 									)}

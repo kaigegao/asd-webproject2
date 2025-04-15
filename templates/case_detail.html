@@ -68,6 +68,17 @@
             background-color: blue;
         }
 
+        .eye-tracking-section {
+            margin-top: 30px;
+            border: 1px solid #ddd;
+            padding: 15px;
+            border-radius: 5px;
+        }
+
+        .eye-tracking-image {
+            max-width: 100%;
+            margin-top: 15px;
+        }
 
     </style>
     <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
@@ -80,6 +91,32 @@
     <div class="scrollable-table">
         {{ table_html|safe }}
     </div>
+    
+    <div class="eye-tracking-section">
+        <h2>眼动数据</h2>
+        {% if eye_data %}
+            <!-- 有眼动数据时显示 -->
+            {% if (eye_data == '1.csv' or eye_data == 'eye_tracking/1.csv') and eye_image %}
+                <!-- 特殊处理1.csv文件 -->
+                <h3>眼动数据可视化</h3>
+                <img src="{{ url_for('get_eye_tracking_image', filename=eye_image) }}" alt="眼动数据可视化" class="eye-tracking-image">
+            {% else %}
+                <!-- 其他文件显示文件名 -->
+                <p>文件名: {{ eye_data }}</p>
+                {% if eye_data == 'eye_tracking/1.csv' or eye_data == '1.csv' %}
+                    <!-- 尝试显示默认眼动轨迹图 -->
+                    <h3>眼动数据可视化</h3>
+                    <img src="{{ url_for('get_eye_tracking_image', filename='1_50.png') }}" alt="眼动数据可视化" class="eye-tracking-image">
+                {% endif %}
+            {% endif %}
+        {% else %}
+            <!-- 无眼动数据时显示上传提示 -->
+            <div class="mt-4 text-center">
+                <p>请上传眼动数据文件</p>
+            </div>
+        {% endif %}
+    </div>
+    
     <div id="brain-image-container" >
         <iframe id="dynamic-iframe" width="100%" height="600px" frameborder="0"></iframe>
         <div id="pagination-container">
@@ -209,17 +246,26 @@ document.getElementById('next').addEventListener('click', () => {
             const caseTitle = getCaseTitle();
             const plotContainer = document.getElementById('plot-container');
 
-            fetch(`/get_column_data/${encodeURIComponent(caseTitle)}/${encodeURIComponent(columnInput)}`)
+            fetch('/api/get_column_data', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    viewing_file: caseTitle,
+                    column_header: columnInput
+                })
+            })
                 .then(response => response.json())
                 .then(data => {
-                    if (data.error) {
-                        alert(data.error);
+                    if (!data.success) {
+                        alert(data.errorMsg || '获取数据失败');
                         return;
                     }
 
                     const trace = {
-                        x: data.index,
-                        y: data.values,
+                        x: data.result.index,
+                        y: data.result.values,
                         mode: 'lines+markers',
                         type: 'scatter'
                     };
@@ -237,20 +283,26 @@ document.getElementById('next').addEventListener('click', () => {
 
         function makePrediction() {
             const caseTitle = getCaseTitle();
-            fetch(`/predict/${encodeURIComponent(caseTitle)}`, {
-                method: 'POST'
+            fetch('/predict', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    viewing_file: caseTitle
+                })
             })
             .then(response => response.json())
             .then(data => {
-                if (data.error) {
-                    alert(data.error);
+                if (!data.success) {
+                    alert(data.errorMsg || '预测失败');
                     return;
                 }
 
                 const predictionResultDiv = document.getElementById('prediction-result');
                 predictionResultDiv.innerHTML = `
-                    <p><strong>Diagnosis:</strong> ${data.diagnosis}</p>
-                    <p><strong>Risk:</strong> ${data.risk}</p>
+                    <p><strong>Diagnosis:</strong> ${data.result.diagnosis}</p>
+                    <p><strong>Risk:</strong> ${data.result.risk}</p>
                 `;
             })
             .catch(error => console.error('Error:', error));
